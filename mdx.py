@@ -50,7 +50,7 @@ def get_exif_gps_info(exif_data):
 class MetaSiphon:
     def __init__(self):
         self.window = tk.Tk()
-        self.window.title("ARISE METASCAN v1.1")
+        self.window.title("MDX v1.1")
         self.window.geometry("850x650")
         self.window.configure(bg='#0f0f0f')
         self.window.minsize(800, 600)
