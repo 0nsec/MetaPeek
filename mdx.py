@@ -69,14 +69,14 @@ class MetaSiphon:
         ctk.set_default_color_theme("blue")
 
         self.window = ctk.CTk()
-        self.window.title("ARISE METASCAN v1.4")
+        self.window.title("ARISE METAPEEK v1.4")
         self.window.geometry("1000x700")
         self.window.minsize(900, 600)
 
         sidebar = ctk.CTkFrame(self.window, width=180, corner_radius=10)
         sidebar.pack(side="left", fill="y", padx=10, pady=10)
 
-        ctk.CTkLabel(sidebar, text="ARISE METASCAN", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(sidebar, text="METAPEEK", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
         ctk.CTkButton(sidebar, text="Browse File", command=self.load_file).pack(pady=10, fill="x")
         self.btn_export = ctk.CTkButton(sidebar, text="Export Metadata", command=self.export_metadata, state="disabled")
         self.btn_export.pack(pady=10, fill="x")
