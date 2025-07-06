@@ -10,7 +10,7 @@ import os
 class MetaSiphon:
     def __init__(self):
         self.window = tk.Tk()
-        self.window.title("META-SIPHON v1.0")
+        self.window.title("MDX v1.0")
         self.window.geometry("700x500")
         self.window.configure(bg='#0f0f0f')
         
@@ -51,9 +51,9 @@ class MetaSiphon:
             elif self.file_path.lower().endswith(('.mp4', '.avi', '.mov')):
                 self.extract_video_metadata()
             else:
-                self.text_box.insert(tk.END, "[ERROR] UNSUPPORTED FILE TYPE\n")
+                self.text_box.insert(tk.END, "[-] UNSUPPORTED FILE TYPE\n")
         except Exception as e:
-            self.text_box.insert(tk.END, f"[SYSTEM FAILURE] {str(e)}\n")
+            self.text_box.insert(tk.END, f"[-] SYSTEM FAILURE {str(e)}\n")
 
     def extract_image_metadata(self):
         img = Image.open(self.file_path)
@@ -67,7 +67,7 @@ class MetaSiphon:
                     self.btn_map.config(state='normal')
                 self.text_box.insert(tk.END, f"{tag}: {value}\n")
         else:
-            self.text_box.insert(tk.END, "[WARNING] NO METADATA FOUND IN IMAGE\n")
+            self.text_box.insert(tk.END, "[!] NO METADATA FOUND IN IMAGE\n")
 
     def extract_pdf_metadata(self):
         with open(self.file_path, 'rb') as f:
@@ -101,7 +101,7 @@ class MetaSiphon:
         
 
         map_obj = folium.Map(location=[lat, lon], zoom_start=15)
-        folium.Marker([lat, lon], tooltip="EXIF LOCATION").add_to(map_obj)
+        folium.Marker([lat, lon], tooltip="[+] EXIF LOCATION").add_to(map_obj)
         map_path = os.path.join(os.getcwd(), "target_location.html")
         map_obj.save(map_path)
         webbrowser.open(f"file://{map_path}")
