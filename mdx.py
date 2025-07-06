@@ -1,5 +1,5 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+import customtkinter as ctk
+from tkinter import filedialog, messagebox, ttk, StringVar
 from PIL import Image, ExifTags
 from PIL.ExifTags import GPSTAGS
 import os
@@ -19,7 +19,7 @@ except ImportError:
     print("Missing mutagen. Please install with: pip install mutagen")
     exit()
 
-
+# GPS Conversion Functions
 def parse_dms(dms):
     return dms[0][0] / dms[0][1] + dms[1][0] / (dms[1][1] * 60) + dms[2][0] / (dms[2][1] * 3600)
 
@@ -49,57 +49,48 @@ def get_exif_gps_info(exif_data):
 
 class MetaSiphon:
     def __init__(self):
-        self.window = tk.Tk()
-        self.window.title("MDX v1.1")
-        self.window.geometry("850x650")
-        self.window.configure(bg='#0f0f0f')
-        self.window.minsize(800, 600)
+        ctk.set_appearance_mode("Dark")
+        ctk.set_default_color_theme("blue")
 
-        self.style = ttk.Style()
-        self.style.configure('TFrame', background='#0f0f0f')
-        self.style.configure('TButton', font=('Courier', 11), padding=5)
-        self.style.configure('TLabel', background='#0f0f0f', foreground='#00ff00')
-        self.style.configure('Status.TLabel', font=('Courier', 9), foreground='#00ccff')
+        self.window = ctk.CTk()
+        self.window.title("MDX v1.3")
+        self.window.geometry("1000x700")
+        self.window.minsize(900, 600)
 
-        header_frame = ttk.Frame(self.window)
-        header_frame.pack(fill=tk.X, padx=20, pady=10)
+        sidebar = ctk.CTkFrame(self.window, width=180, corner_radius=10)
+        sidebar.pack(side="left", fill="y", padx=10, pady=10)
 
-        ttk.Label(header_frame, text="MDX v1.1", font=("Courier", 18, "bold")).pack(pady=10)
-        ttk.Label(header_frame, text="SELECT TARGET FILE FOR METADATA EXTRACTION", font=("Courier", 11)).pack()
+        ctk.CTkLabel(sidebar, text="MetaPeek", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
+        ctk.CTkButton(sidebar, text="Browse File", command=self.load_file).pack(pady=10, fill="x")
+        self.btn_export = ctk.CTkButton(sidebar, text="Export Metadata", command=self.export_metadata, state="disabled")
+        self.btn_export.pack(pady=10, fill="x")
+        self.btn_map = ctk.CTkButton(sidebar, text="Open Map", command=self.show_google_map, state="disabled")
+        self.btn_map.pack(pady=10, fill="x")
 
-        btn_frame = ttk.Frame(self.window)
-        btn_frame.pack(pady=15, fill=tk.X, padx=50)
+        self.map_label = ctk.CTkLabel(sidebar, text="")
+        self.map_label.pack(pady=10)
 
-        self.btn_select = ttk.Button(btn_frame, text="BROWSE FILES", command=self.load_file)
-        self.btn_select.pack(side=tk.LEFT, expand=True, padx=10)
+        self.tree_frame = ctk.CTkFrame(self.window)
+        self.tree_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-        self.btn_export = ttk.Button(btn_frame, text="EXPORT METADATA", command=self.export_metadata, state='disabled')
-        self.btn_export.pack(side=tk.LEFT, expand=True, padx=10)
-
-        self.btn_map = ttk.Button(btn_frame, text="OPEN GOOGLE MAPS", command=self.show_google_map, state='disabled')
-        self.btn_map.pack(side=tk.LEFT, expand=True, padx=10)
-
-        display_frame = ttk.Frame(self.window)
-        display_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-
-        self.tree = ttk.Treeview(display_frame, columns=('Value'), selectmode='extended')
+        self.tree = ttk.Treeview(self.tree_frame, columns=('Value'), selectmode='extended')
         self.tree.heading('#0', text='Metadata Field')
         self.tree.heading('Value', text='Value')
-        self.tree.column('#0', width=250, minwidth=200)
-        self.tree.column('Value', width=400, minwidth=300)
+        self.tree.column('#0', width=300, minwidth=200)
+        self.tree.column('Value', width=500, minwidth=300)
 
-        vsb = ttk.Scrollbar(display_frame, orient="vertical", command=self.tree.yview)
-        hsb = ttk.Scrollbar(display_frame, orient="horizontal", command=self.tree.xview)
+        vsb = ttk.Scrollbar(self.tree_frame, orient="vertical", command=self.tree.yview)
+        hsb = ttk.Scrollbar(self.tree_frame, orient="horizontal", command=self.tree.xview)
         self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        hsb.pack(side=tk.BOTTOM, fill=tk.X)
+        self.tree.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+        hsb.pack(side="bottom", fill="x")
 
-        self.status_var = tk.StringVar()
-        self.status_var.set("STATUS: Ready | Awaiting target file")
-        status_bar = ttk.Label(self.window, textvariable=self.status_var, style='Status.TLabel', relief='sunken', padding=5)
-        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.status_var = StringVar()
+        self.status_var.set("STATUS: Ready | Drag & drop or browse file")
+        status_bar = ctk.CTkLabel(self.window, textvariable=self.status_var, anchor="w")
+        status_bar.pack(side="bottom", fill="x")
 
         self.file_path = None
         self.coordinates = None
@@ -127,20 +118,20 @@ class MetaSiphon:
             ('Video', '*.mp4 *.avi *.mov'),
             ('All Files', '*.*')
         )
-
         self.file_path = filedialog.askopenfilename(filetypes=file_types)
-        if not self.file_path:
-            return
+        if self.file_path:
+            self.process_file()
 
+    def process_file(self):
         self.clear_treeview()
         self.coordinates = None
         self.metadata = {}
-        self.btn_map.config(state='disabled')
-        self.btn_export.config(state='disabled')
+        self.btn_map.configure(state="disabled")
+        self.btn_export.configure(state="disabled")
+        self.map_label.configure(text="")
 
         filename = os.path.basename(self.file_path)
         self.update_status(f"Processing: {filename}...")
-
         try:
             if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                 self.extract_image_metadata()
@@ -152,10 +143,8 @@ class MetaSiphon:
                 self.add_metadata('Error', 'Unsupported file type')
                 self.update_status("Error: Unsupported file type")
                 return
-
-            self.btn_export.config(state='normal')
+            self.btn_export.configure(state="normal")
             self.update_status(f"Metadata extracted: {len(self.metadata)} fields found")
-
         except Exception as e:
             self.add_metadata('System Error', str(e))
             self.update_status(f"Critical Error: {str(e)}")
@@ -167,16 +156,16 @@ class MetaSiphon:
             self.metadata['File Type'] = img.format
             self.metadata['Dimensions'] = f"{img.width} x {img.height} px"
             self.metadata['Color Mode'] = img.mode
-
             gps_info = get_exif_gps_info(exif_data)
             if gps_info:
                 try:
                     self.coordinates = convert_to_decimal(gps_info)
-                    self.metadata['GPS Coordinates'] = f"{self.coordinates[0]}, {self.coordinates[1]}"
-                    self.btn_map.config(state='normal')
+                    coord_text = f"{self.coordinates[0]}, {self.coordinates[1]}"
+                    self.metadata['GPS Coordinates'] = coord_text
+                    self.map_label.configure(text=coord_text)
+                    self.btn_map.configure(state="normal")
                 except Exception as gps_error:
                     self.metadata['GPS Error'] = str(gps_error)
-
             for tag_id, value in exif_data.items():
                 tag = ExifTags.TAGS.get(tag_id, tag_id)
                 if isinstance(value, bytes):
@@ -185,12 +174,9 @@ class MetaSiphon:
                     except:
                         value = str(value)
                 self.metadata[tag] = value
-
             for key, value in self.metadata.items():
                 self.add_metadata(key, value)
-
             self.update_status(f"Image metadata extracted: {len(self.metadata)} fields")
-
         except Exception as e:
             self.add_metadata('Processing Error', str(e))
             self.update_status(f"Image Error: {str(e)}")
@@ -200,18 +186,13 @@ class MetaSiphon:
             with open(self.file_path, 'rb') as f:
                 pdf = PdfReader(f)
                 info = pdf.metadata or {}
-
                 self.metadata['Pages'] = len(pdf.pages)
                 self.metadata['Encrypted'] = pdf.is_encrypted
-
                 for key, value in info.items():
                     self.metadata[key.strip('/')] = value
-
                 for key, value in self.metadata.items():
                     self.add_metadata(key, value)
-
                 self.update_status(f"PDF metadata extracted: {len(self.metadata)} fields")
-
         except Exception as e:
             self.add_metadata('Processing Error', str(e))
             self.update_status(f"PDF Error: {str(e)}")
@@ -223,21 +204,16 @@ class MetaSiphon:
                 self.add_metadata('Warning', 'No metadata found')
                 self.update_status("Audio: No metadata detected")
                 return
-
             self.metadata['Format'] = audio.mime[0] if audio.mime else 'Unknown'
             self.metadata['Bitrate'] = f"{audio.info.bitrate} kbps" if hasattr(audio.info, 'bitrate') else 'N/A'
             self.metadata['Duration'] = str(timedelta(seconds=int(audio.info.length))) if hasattr(audio.info, 'length') else 'N/A'
-
             for key, value in audio.items():
                 if isinstance(value, list) and len(value) == 1:
                     value = value[0]
                 self.metadata[key] = value
-
             for key, value in self.metadata.items():
                 self.add_metadata(key, value)
-
             self.update_status(f"Audio metadata extracted: {len(self.metadata)} fields")
-
         except Exception as e:
             self.add_metadata('Processing Error', str(e))
             self.update_status(f"Audio Error: {str(e)}")
@@ -246,7 +222,6 @@ class MetaSiphon:
         if not self.coordinates:
             messagebox.showwarning("Location Error", "No GPS coordinates available")
             return
-
         try:
             lat, lon = self.coordinates
             maps_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
@@ -260,15 +235,12 @@ class MetaSiphon:
         if not self.metadata:
             messagebox.showwarning("Export Error", "No metadata to export")
             return
-
         export_path = filedialog.asksaveasfilename(
             defaultextension=".json",
             filetypes=(("JSON files", "*.json"), ("Text files", "*.txt"), ("All files", "*.*"))
         )
-
         if not export_path:
             return
-
         try:
             if export_path.endswith('.json'):
                 with open(export_path, 'w') as f:
@@ -277,10 +249,8 @@ class MetaSiphon:
                 with open(export_path, 'w') as f:
                     for key, value in self.metadata.items():
                         f.write(f"{key}: {value}\n")
-
             self.update_status(f"Metadata exported to {os.path.basename(export_path)}")
             messagebox.showinfo("Export Successful", "Metadata exported successfully")
-
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed to export: {str(e)}")
             self.update_status(f"Export Error: {str(e)}")
