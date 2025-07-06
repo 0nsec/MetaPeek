@@ -21,16 +21,32 @@ except ImportError:
 
 # GPS Conversion Functions
 def parse_dms(dms):
-    return dms[0][0] / dms[0][1] + dms[1][0] / (dms[1][1] * 60) + dms[2][0] / (dms[2][1] * 3600)
+    if not isinstance(dms, (list, tuple)) or len(dms) != 3:
+        raise ValueError("Invalid DMS format.")
+    try:
+        deg = dms[0][0] / dms[0][1]
+        minutes = dms[1][0] / dms[1][1]
+        seconds = dms[2][0] / dms[2][1]
+        return deg + (minutes / 60.0) + (seconds / 3600.0)
+    except Exception as e:
+        raise ValueError(f"Error parsing DMS: {e}")
 
 def convert_to_decimal(gps_info):
     try:
-        lat = parse_dms(gps_info.get("GPSLatitude"))
-        lon = parse_dms(gps_info.get("GPSLongitude"))
+        lat_data = gps_info.get("GPSLatitude")
+        lon_data = gps_info.get("GPSLongitude")
+        lat_ref = gps_info.get("GPSLatitudeRef")
+        lon_ref = gps_info.get("GPSLongitudeRef")
 
-        if gps_info.get("GPSLatitudeRef", 'N') == 'S':
+        if not lat_data or not lon_data or not lat_ref or not lon_ref:
+            raise ValueError("Missing GPS coordinate components.")
+
+        lat = parse_dms(lat_data)
+        lon = parse_dms(lon_data)
+
+        if lat_ref.upper() == 'S':
             lat = -lat
-        if gps_info.get("GPSLongitudeRef", 'E') == 'W':
+        if lon_ref.upper() == 'W':
             lon = -lon
 
         return round(lat, 6), round(lon, 6)
@@ -53,19 +69,21 @@ class MetaSiphon:
         ctk.set_default_color_theme("blue")
 
         self.window = ctk.CTk()
-        self.window.title("MDX v1.3")
+        self.window.title("ARISE METASCAN v1.4")
         self.window.geometry("1000x700")
         self.window.minsize(900, 600)
 
         sidebar = ctk.CTkFrame(self.window, width=180, corner_radius=10)
         sidebar.pack(side="left", fill="y", padx=10, pady=10)
 
-        ctk.CTkLabel(sidebar, text="MetaPeek", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(sidebar, text="ARISE METASCAN", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=20)
         ctk.CTkButton(sidebar, text="Browse File", command=self.load_file).pack(pady=10, fill="x")
         self.btn_export = ctk.CTkButton(sidebar, text="Export Metadata", command=self.export_metadata, state="disabled")
         self.btn_export.pack(pady=10, fill="x")
         self.btn_map = ctk.CTkButton(sidebar, text="Open Map", command=self.show_google_map, state="disabled")
         self.btn_map.pack(pady=10, fill="x")
+        self.btn_clean = ctk.CTkButton(sidebar, text="Remove Metadata", command=self.remove_metadata, state="disabled")
+        self.btn_clean.pack(pady=10, fill="x")
 
         self.map_label = ctk.CTkLabel(sidebar, text="")
         self.map_label.pack(pady=10)
@@ -128,6 +146,7 @@ class MetaSiphon:
         self.metadata = {}
         self.btn_map.configure(state="disabled")
         self.btn_export.configure(state="disabled")
+        self.btn_clean.configure(state="disabled")
         self.map_label.configure(text="")
 
         filename = os.path.basename(self.file_path)
@@ -144,6 +163,7 @@ class MetaSiphon:
                 self.update_status("Error: Unsupported file type")
                 return
             self.btn_export.configure(state="normal")
+            self.btn_clean.configure(state="normal")
             self.update_status(f"Metadata extracted: {len(self.metadata)} fields found")
         except Exception as e:
             self.add_metadata('System Error', str(e))
@@ -254,6 +274,29 @@ class MetaSiphon:
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed to export: {str(e)}")
             self.update_status(f"Export Error: {str(e)}")
+
+    def remove_metadata(self):
+        if not self.file_path or not self.file_path.lower().endswith(('.jpg', '.jpeg', '.png')):
+            messagebox.showwarning("Remove Metadata", "Only image metadata removal is supported.")
+            return
+        try:
+            img = Image.open(self.file_path)
+            data = list(img.getdata())
+            img_without_exif = Image.new(img.mode, img.size)
+            img_without_exif.putdata(data)
+
+            new_path = filedialog.asksaveasfilename(
+                defaultextension=".jpg",
+                filetypes=[("JPEG", "*.jpg"), ("PNG", "*.png")]
+            )
+            if not new_path:
+                return
+            img_without_exif.save(new_path)
+            self.update_status(f"Metadata removed and saved to {new_path}")
+            messagebox.showinfo("Metadata Removed", "Image saved without metadata.")
+        except Exception as e:
+            messagebox.showerror("Remove Metadata Error", f"Failed to remove metadata: {str(e)}")
+            self.update_status(f"Remove Error: {str(e)}")
 
     def run(self):
         self.window.mainloop()
